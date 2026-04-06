@@ -25,13 +25,13 @@ void	*tiny(size_t size) {
 	}
 }
 
-void	*small(size_t size) {
+// void	*small(size_t size) {
 
-}
+// }
 
-void	*large(size_t size) {
+// void	*large(size_t size) {
 
-}
+// }
 
 void	*malloc(size_t size) {
 	if (size <= (size_t)0)

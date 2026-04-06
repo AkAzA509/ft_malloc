@@ -6,24 +6,31 @@
 #include <stdbool.h>
 
 /*
-** Seuils de taille
-** TINY  : 1 à TINY_MAX octets  → stocké en zone TINY
-** SMALL : TINY_MAX+1 à SMALL_MAX → stocké en zone SMALL
-** LARGE : au-delà               → mmap direct
+** Lenght max
+** TINY  : 1 to TINY_MAX octets
+** SMALL : TINY_MAX+1 to SMALL_MAX
+** LARGE : SMALL_MAX+1 to space limits
 */
-#define TINY_MAX  128
-#define SMALL_MAX 1024
+#define TINY_MAX	128
+#define SMALL_MAX	1024
 
 /*
-** Taille des zones pré-allouées
-** Chaque zone doit contenir au moins 100 allocations
-** On arrondit au multiple de page supérieur
+** Get the page size on the current os
+** _SC_PAGESIZE is not portable (this alocator is linux only implementation)
 */
-#define PAGE_SIZE        (size_t)sysconf(_SC_PAGESIZE)
+#define PAGE_SIZE (size_t)sysconf(_SC_PAGESIZE)
+
+/*
+** Align the memory zone on a power of 2 to use it easier
+*/
 #define ALIGN_TO_PAGE(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
-#define TINY_ZONE_SIZE   ALIGN_TO_PAGE((TINY_MAX  + sizeof(t_block)) * 100)
-#define SMALL_ZONE_SIZE  ALIGN_TO_PAGE((SMALL_MAX + sizeof(t_block)) * 100)
+/*
+** Compute the zone size with the mmory alignement in one pass
+** Only the SMALL and TINY are compute because the LARGE doesn't have a explicit limit size
+*/
+#define TINY_ZONE_SIZE ALIGN_TO_PAGE((TINY_MAX  + sizeof(t_block)) * 100)
+#define SMALL_ZONE_SIZE ALIGN_TO_PAGE((SMALL_MAX + sizeof(t_block)) * 100)
 
 /*
 ** Alignement mémoire
@@ -46,13 +53,12 @@
 ** next/prev sont utilisés uniquement quand le bloc est libre
 ** Quand le bloc est occupé, ils sont ignorés (mais présents)
 */
-typedef struct s_block
-{
-    struct s_block  *next;
-    struct s_block  *prev;
-    size_t          size;
-    bool            is_free;
-}   t_block;
+typedef struct s_block {
+	struct s_block	*next;
+	struct s_block	*prev;
+	size_t			size;
+	bool			is_free;
+}					t_block;
 
 /*
 ** Header de zone
@@ -65,32 +71,26 @@ typedef struct s_block
 ** free_blocks permet de savoir en O(1) si la zone est entièrement
 ** libre (auquel cas on peut munmap())
 */
-typedef struct s_zone
-{
-    struct s_zone   *next;
-    size_t          zone_size;
-    size_t          free_blocks;
-    size_t          total_blocks;
-}   t_zone;
+typedef struct s_zone {
+	struct s_zone	*next;
+	size_t			zone_size;
+	size_t			free_blocks;
+	size_t			total_blocks;
+}					t_zone;
 
 /*
-** État global de l'allocateur
-** Une seule instance, trois têtes de liste
-** Initialisé à {0} dans malloc.c
+** Global struct
+** Store the 3 allocation linked list
 */
-typedef struct s_allocator
-{
-    t_zone  *tiny;
-    t_zone  *small;
-    t_zone  *large;
-}   t_allocator;
+typedef struct s_allocator {
+	t_zone			*tiny;
+	t_zone			*small;
+	t_zone			*large;
+}					t_allocator;
 
 extern t_allocator g_alloc;
 
-/*
-** Fonctions publiques
-*/
-void    *malloc(size_t size);
-void    free(void *ptr);
-void    *realloc(void *ptr, size_t size);
-void    show_alloc_mem(void);
+void	*malloc(size_t size);
+void	free(void *ptr);
+void	*realloc(void *ptr, size_t size);
+void	show_alloc_mem(void);
