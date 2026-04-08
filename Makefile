@@ -7,7 +7,11 @@ SYMLINK	:= libft_malloc.so
 CC		:= cc
 FLG		:= -Wextra -Werror -Wextra -g3 -fPIC #-fsanitize=address,leak
 
-SRC		:= main.c
+SRC		:= malloc.c \
+		   free.c \
+		   realloc.c \
+		   logger.c \
+		   ft_printf/*.c
 
 OBJ_DIR	:= obj/
 OBJ		:= $(SRC:%.c=$(OBJ_DIR)%.o)

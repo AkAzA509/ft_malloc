@@ -4,6 +4,22 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include "ft_printf/ft_printf.h"
+
+#define PINK "\033[95m"
+#define GREEN "\033[92m"
+#define WHITE "\033[97m"
+#define YELLOW "\033[93m"
+#define BLUE "\033[94m"
+#define RED "\033[91m"
+#define CYAN "\033[96m"
+#define BOLD "\033[1m"
+#define RESET "\033[0m"
+
+#define BLD_WHITE BOLD WHITE
+#define BLD_RED BOLD RED
+#define BLD_BLUE BOLD BLUE
+#define BLD_GREEN BOLD GREEN
 
 /*
 ** Lenght max
@@ -29,8 +45,9 @@
 ** Compute the zone size with the mmory alignement in one pass
 ** Only the SMALL and TINY are compute because the LARGE doesn't have a explicit limit size
 */
-#define TINY_ZONE_SIZE ALIGN_TO_PAGE((TINY_MAX  + sizeof(t_block)) * 100)
-#define SMALL_ZONE_SIZE ALIGN_TO_PAGE((SMALL_MAX + sizeof(t_block)) * 100)
+#define TINY_ZONE_SIZE ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(TINY_MAX) + sizeof(t_block)) * 100)
+#define SMALL_ZONE_SIZE ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(SMALL_MAX) + sizeof(t_block)) * 100)
+#define LARGE_ZONE_SIZE(x) ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(x) + sizeof(t_block)))
 
 /*
 ** Alignement mémoire
@@ -39,40 +56,24 @@
 */
 #define ALIGN8(x) (((x) + 7) & ~7)
 
-/*
-** Header de bloc
-** Placé juste avant la zone data retournée à l'utilisateur
-**
-** En mémoire :
-**   [ t_block | ...data... ]
-**               ↑ ptr retourné par malloc = (void*)(block + 1)
-**
-** Pour retrouver le header depuis un ptr utilisateur :
-**   t_block *block = (t_block*)ptr - 1;
-**
-** next/prev sont utilisés uniquement quand le bloc est libre
-** Quand le bloc est occupé, ils sont ignorés (mais présents)
-*/
+typedef enum e_block_kind {
+	TINY,
+	SMALL,
+	LARGE
+}	e_block_kind;
+
 typedef struct s_block {
 	struct s_block	*next;
 	struct s_block	*prev;
+	struct s_zone	*owner;
 	size_t			size;
+	e_block_kind	kind;
 	bool			is_free;
 }					t_block;
 
-/*
-** Header de zone
-** Placé au tout début de chaque mmap()
-**
-** En mémoire :
-**   [ t_zone | t_block | data | t_block | data | ... ]
-**              ↑ premier bloc = (t_block*)(zone + 1)
-**
-** free_blocks permet de savoir en O(1) si la zone est entièrement
-** libre (auquel cas on peut munmap())
-*/
 typedef struct s_zone {
 	struct s_zone	*next;
+	struct s_block	*block_list;
 	size_t			zone_size;
 	size_t			free_blocks;
 	size_t			total_blocks;
@@ -90,7 +91,28 @@ typedef struct s_allocator {
 
 extern t_allocator g_alloc;
 
-void	*malloc(size_t size);
-void	free(void *ptr);
-void	*realloc(void *ptr, size_t size);
+// utils
+t_zone	**find_zone_link(t_zone **head, t_zone *zone);
+bool	split_block(t_block *block, size_t align_mem);
+t_block	*merge_with_next(t_block *block, t_zone *zone);
+
+// mandatory
+void	*ft_malloc(size_t size);
+void	ft_free(void *ptr);
+void	*ft_realloc(void *ptr, size_t size);
 void	show_alloc_mem(void);
+
+// bonus
+void	show_alloc_mem_ex(void);
+
+// env var:
+//		- MALLOC_PERTURB_
+//		- MALLOC_MMAP_MAX_
+//		- MALLOC_MMAP_THRESHOLD_
+//		- MALLOC_LOG_ (custom)
+
+// pour le multi thread:
+// mutex et flag dans la struct
+// realloc envoie le flag si c'est lui qui a lock avant et qui a besoins de malloc et free
+// pour que malloc et free puisse faire les tache malgrer le lock
+// si malloc et free sont appeler alors que mutex et lock et que pas de flag alors attente
