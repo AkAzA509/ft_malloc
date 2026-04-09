@@ -1,6 +1,10 @@
 #include "malloc.h"
 #include <stdio.h>
 
+/*
+* Find the right zone in the allocation linked list
+* to match the pointer
+*/
 t_zone	**find_zone_link(t_zone **head, t_zone *zone) {
 	t_zone	**link = head;
 
@@ -9,10 +13,29 @@ t_zone	**find_zone_link(t_zone **head, t_zone *zone) {
 	return link;
 }
 
+/*
+* Returns true if 'right' starts exactly where 'left' ends in memory.
+*
+* Memory layout :
+*
+*  left                                        right
+*   |                                            |
+*   v                                            v
+*  [ t_block | . . . data (left->size bytes) . . | t_block | . . . ]
+*   ^          ^                                 ^
+*   left      left + 1         (char *)(left + 1) + left->size
+*              |
+*              + 1 skips sizeof(t_block) bytes (pointer arithmetic)
+*
+* If (char *)(left + 1) + left->size == (char *)right -> blocks are adjacent
+*/
 static bool	is_adjacent(t_block *left, t_block *right) {
 	return ((char *)(left + 1) + left->size == (char *)right);
 }
 
+/*
+* Take two block and merge it together (if they are adjacent in memory and in the linked list)
+*/
 t_block	*merge_with_next(t_block *block, t_zone *zone) {
 	t_block	*next = block->next;
 
@@ -30,6 +53,12 @@ t_block	*merge_with_next(t_block *block, t_zone *zone) {
 	return block;
 }
 
+/*
+* TINY or SMALL zones: marks the block as free.
+* Check whether, as a result of this block being freed, the entire zone is now free,
+* if so, the entire zone is freed,
+* otherwise, check whether the adjacent blocks are free in order to group the blocks together (defragment the memory)
+*/
 static void	free_other(t_block *block, t_zone **zone_head) {
 	t_zone	*zone = block->owner;
 	t_zone	**zone_link = find_zone_link(zone_head, zone);
@@ -55,6 +84,9 @@ static void	free_other(t_block *block, t_zone **zone_head) {
 	}
 }
 
+/*
+* LARGE type zone: free the entire zone
+*/
 static void	free_large(t_block *block) {
 	t_zone	*zone = block->owner;
 	t_zone	**zone_link = find_zone_link(&g_alloc.large, zone);
@@ -64,6 +96,10 @@ static void	free_large(t_block *block) {
 	munmap(zone, zone->zone_size);
 }
 
+/*
+* The ft_free() function frees the memory space pointed to by ptr, which must have been returned by a previous call to ft_malloc(), or ft_realloc().
+* Otherwise, or if ft_free(ptr) has already been called before, undefined behavior occurs. If ptr is NULL, no operation is performed.
+*/
 void	ft_free(void *ptr) {
 	if (!ptr)
 		return;

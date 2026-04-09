@@ -1,18 +1,11 @@
 #include "malloc.h"
 #include <stdio.h>
 
-static void	print_hex_byte(unsigned char byte)
-{
-	const char	*digits;
+// ----------------------------------------------------------------
+// 						Classic Logger
+// ----------------------------------------------------------------
 
-	digits = "0123456789abcdef";
-	ft_putchar(digits[byte >> 4]);
-	ft_putchar(digits[byte & 0x0F]);
-	ft_putchar(' ');
-}
-
-static size_t print_alloc(t_zone *zone, char *type) {
-	size_t	total_mem = 0;
+static size_t print_alloc(t_zone *zone, char *type, size_t *total_mem) {
 	t_block	*block;
 
 	block = zone ? zone->block_list : NULL;
@@ -20,7 +13,7 @@ static size_t print_alloc(t_zone *zone, char *type) {
 		ft_printf("%s : %p\n", type, zone);
 		while (block) {
 			ft_printf("Block : %p -> %p = %d bytes, the block is %s\n", block, (char *)(block + 1) + block->size, block->size, block->is_free == true ? "free" : "in use");
-			total_mem += block->size;
+			*total_mem += block->size;
 			block = block->next;
 		}
 	}
@@ -35,14 +28,27 @@ void	show_alloc_mem(void) {
 	t_zone	*large = g_alloc.large;
 	size_t	total_mem = 0;
 
-	total_mem += print_alloc(tiny, "TINY");
-	total_mem += print_alloc(small, "SMALL");
-	total_mem += print_alloc(large, "LARGE");
+	print_alloc(tiny, "TINY", &total_mem);
+	print_alloc(small, "SMALL", &total_mem);
+	print_alloc(large, "LARGE", &total_mem);
 
 	ft_printf("\nTOTAL : %d\n", total_mem);
 }
 
-void print_hex_info(t_zone *zone, char *type) {
+// ----------------------------------------------------------------
+// 						Extend Logger
+// ----------------------------------------------------------------
+
+static void	print_hex_byte(unsigned char byte) {
+	const char	*digits;
+
+	digits = "0123456789abcdef";
+	ft_putchar(digits[byte >> 4]);
+	ft_putchar(digits[byte & 0x0F]);
+	ft_putchar(' ');
+}
+
+static void print_hex_dump(t_zone *zone, char *type) {
 	t_block	*block;
 
 	block = zone ? zone->block_list : NULL;
@@ -83,7 +89,7 @@ void	show_alloc_mem_ex(void) {
 	t_zone	*small = g_alloc.small;
 	t_zone	*large = g_alloc.large;
 
-	print_hex_info(tiny, "TINY");
-	print_hex_info(small, "SMALL");
-	print_hex_info(large, "LARGE");
+	print_hex_dump(tiny, "TINY");
+	print_hex_dump(small, "SMALL");
+	print_hex_dump(large, "LARGE");
 }

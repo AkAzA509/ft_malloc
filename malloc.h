@@ -6,13 +6,10 @@
 #include <stdbool.h>
 #include "ft_printf/ft_printf.h"
 
-#define PINK "\033[95m"
 #define GREEN "\033[92m"
 #define WHITE "\033[97m"
-#define YELLOW "\033[93m"
 #define BLUE "\033[94m"
 #define RED "\033[91m"
-#define CYAN "\033[96m"
 #define BOLD "\033[1m"
 #define RESET "\033[0m"
 
@@ -37,7 +34,28 @@
 #define PAGE_SIZE (size_t)sysconf(_SC_PAGESIZE)
 
 /*
-** Align the memory zone on a power of 2 to use it easier
+** Rounds x up to the nearest multiple of 8.
+** Ensures every address returned to the user is 8-byte aligned.
+**
+**   + 7        ensures we round up and not down
+**   & ~7       clears the 3 lower bits (the actual rounding)
+**
+** Example with x = 13 :
+**   13 + 7 = 20
+**   20 & ~7 = 16
+*/
+#define ALIGN8(x) (((x) + 7) & ~7)
+
+/*
+** Rounds x up to the nearest multiple of PAGE_SIZE.
+**
+** The trick works because PAGE_SIZE is a power of 2 :
+**   + (PAGE_SIZE - 1)  ensures we round up and not down
+**   & ~(PAGE_SIZE - 1) clears the lower bits (the actual rounding)
+**
+** Example with PAGE_SIZE = 4096 and x = 5000 :
+**   5000 + 4095 = 9095
+**   9095 & ~4095 = 8192  (2 pages)
 */
 #define ALIGN_TO_PAGE(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
@@ -48,13 +66,6 @@
 #define TINY_ZONE_SIZE ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(TINY_MAX) + sizeof(t_block)) * 100)
 #define SMALL_ZONE_SIZE ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(SMALL_MAX) + sizeof(t_block)) * 100)
 #define LARGE_ZONE_SIZE(x) ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(x) + sizeof(t_block)))
-
-/*
-** Alignement mémoire
-** Toute adresse retournée à l'utilisateur doit être alignée sur 8 octets
-** On arrondit la taille demandée au multiple de 8 supérieur
-*/
-#define ALIGN8(x) (((x) + 7) & ~7)
 
 typedef enum e_block_kind {
 	TINY,
