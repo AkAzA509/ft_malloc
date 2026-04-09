@@ -3,6 +3,9 @@
 
 t_allocator g_alloc = {0};
 
+/*
+* Allocate the zone and create the first block with all rest memory and initialize it.
+*/
 static t_zone	*create_zone(size_t zone_size, e_block_kind kind) {
 	t_zone	*zone = mmap(0, zone_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (zone == MAP_FAILED)
@@ -26,8 +29,30 @@ static t_zone	*create_zone(size_t zone_size, e_block_kind kind) {
 }
 
 /*
-** avance de un block + align_mem qui sera utiliser par le precedent block
-** tout ca caster en char* pour prendre byte par bytes et ensuite caster en t_block*
+* Splits a block into two blocks if there is enough remaining space.
+*
+* Before split :
+*
+*  block
+*   |
+*   v
+*  [ t_block | . . . . . . . data (block->size bytes) . . . . . . . ]
+*
+* After split :
+*
+*  block                        new_block
+*   |                                |
+*   v                                v
+*  [ t_block | data (align_mem) | t_block | data (remaining bytes) ]
+*              ^                  ^
+*              |                  (char *)(block + 1) + align_mem
+*              user gets this ptr = (void *)(block + 1)
+*
+* The split only occurs if the remaining space after align_mem is large
+* enough to hold a t_block header plus at least ALIGN8(1) bytes of data.
+* new_block is inserted right after block in the free list.
+*
+* Returns true if the split was performed, false otherwise.
 */
 bool	split_block(t_block *block, size_t align_mem) {
 	t_block	*new_block;
@@ -47,6 +72,9 @@ bool	split_block(t_block *block, size_t align_mem) {
 	return true;
 }
 
+/*
+* Create TINY or SMALL type zone
+*/
 static void	*allocate_block(size_t align_mem, size_t zone_size, e_block_kind kind, t_zone **zone_head) {
 	t_zone	*zone = NULL;
 	t_block	*block = NULL;
@@ -86,6 +114,9 @@ static void	*allocate_block(size_t align_mem, size_t zone_size, e_block_kind kin
 	return (void *)(block + 1);
 }
 
+/*
+* Create specific LARGE type zone
+*/
 static void	*large(size_t zone_large_size, t_zone **zone_head) {
 	t_zone	*zone;
 	t_block	*block;
@@ -102,6 +133,11 @@ static void	*large(size_t zone_large_size, t_zone **zone_head) {
 	return (void *)(block + 1);
 }
 
+/*
+* The ft_malloc() function allocates size bytes and returns a pointer to the allocated memory.
+* The memory is not initialized (Malloc environnement variable can change this behavior).
+* If size is 0, then ft_malloc() returns NULL.
+*/
 void	*ft_malloc(size_t size) {
 	if (size <= (size_t)0)
 		return NULL;
