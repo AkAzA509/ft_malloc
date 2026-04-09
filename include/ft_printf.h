@@ -16,7 +16,6 @@
 # include <unistd.h>
 # include <stdlib.h>
 # include <stdarg.h>
-//# include <stdio.h>
 
 int		ft_printf(const char *format, ...);
 int		ft_putchar(char c);
@@ -28,8 +27,8 @@ int		p_format(void *adr, char format);
 int		convert_hexa(unsigned long nb, char format);
 int		di_format(int nb, int flag);
 int		u_format(unsigned int nb);
+int		zu_format(size_t nb);
+int		zdi_format(ssize_t nb, int flag);
 void	len_calc(int *total_len, int len);
-char	*ft_unsigned_itoa(unsigned int n);
-char	*ft_itoa(int n);
 
 #endif

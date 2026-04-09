@@ -1,4 +1,4 @@
-#include "malloc.h"
+#include "../include/malloc.h"
 #include <stdio.h>
 
 /*
@@ -63,14 +63,20 @@ static void	free_other(t_block *block, t_zone **zone_head) {
 	t_zone	*zone = block->owner;
 	t_zone	**zone_link = find_zone_link(zone_head, zone);
 
-	if (!*zone_link)
+	if (!*zone_link) {
+		if (g_alloc.MALLOC_LOG_)
+			ft_printf(BLD_RED"Error: ptr not recognize, free failed\n"RESET);
 		return;
+	}
 
 	if (block->is_free)
 		return;
+	if (g_alloc.MALLOC_PERTURB_ENABLE_ && g_alloc.MALLOC_PERTURB_VALUE_)
+		perturb_fill((void *)(block + 1), block->size, true);
 
 	block->is_free = true;
 	zone->free_blocks++;
+	int kind = block->kind;
 
 	while (block->prev && block->prev->is_free && is_adjacent(block->prev, block))
 		block = merge_with_next(block->prev, zone);
@@ -79,8 +85,13 @@ static void	free_other(t_block *block, t_zone **zone_head) {
 		block = merge_with_next(block, zone);
 
 	if (zone->total_blocks == 1) {
-		*zone_link = zone->next;
-		munmap(zone, zone->zone_size);
+		t_zone *next = zone->next;
+		if (munmap(zone, zone->zone_size) < 0) {
+			if (g_alloc.MALLOC_LOG_)
+				ft_printf(BLD_RED"Error: munmap() failed while dealocate %s block\n"RESET, kind == TINY ? "TINY" : "SMALL");
+			return ;
+		}
+		*zone_link = next;
 	}
 }
 
@@ -91,16 +102,27 @@ static void	free_large(t_block *block) {
 	t_zone	*zone = block->owner;
 	t_zone	**zone_link = find_zone_link(&g_alloc.large, zone);
 
+	if (!*zone_link) {
+		if (g_alloc.MALLOC_LOG_)
+			ft_printf(BLD_RED"Error: ptr not recognize, free failed\n"RESET);
+		return;
+	}
+
+	t_zone *next = zone->next;
+	
+	if (munmap(zone, zone->zone_size) < 0) {
+		if (g_alloc.MALLOC_LOG_)
+			ft_printf(BLD_RED"Error: munmap() failed while dealocate LARGE block\n"RESET);
+		return ;
+	}
+	if (g_alloc.mmap_max > 0)
+		g_alloc.mmap_max--;
+
 	if (*zone_link)
-		*zone_link = (*zone_link)->next;
-	munmap(zone, zone->zone_size);
+		*zone_link = next;
 }
 
-/*
-* The ft_free() function frees the memory space pointed to by ptr, which must have been returned by a previous call to ft_malloc(), or ft_realloc().
-* Otherwise, or if ft_free(ptr) has already been called before, undefined behavior occurs. If ptr is NULL, no operation is performed.
-*/
-void	ft_free(void *ptr) {
+void	internal_free(void *ptr) {
 	if (!ptr)
 		return;
 
@@ -122,4 +144,15 @@ void	ft_free(void *ptr) {
 		default:
 			break;
 	}
+}
+
+/*
+* The ft_free() function frees the memory space pointed to by ptr, which must have been returned by a previous call to ft_malloc(), or ft_realloc().
+* Otherwise, or if ft_free(ptr) has already been called before, undefined behavior occurs. If ptr is NULL, no operation is performed.
+*/
+void	ft_free(void *ptr) {
+	pthread_mutex_lock(&g_alloc.mutex);
+	is_env_var();
+	internal_free(ptr);
+	pthread_mutex_unlock(&g_alloc.mutex);
 }
