@@ -4,12 +4,14 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include "ft_printf/ft_printf.h"
+#include <pthread.h>
+#include "ft_printf.h"
 
 #define GREEN "\033[92m"
 #define WHITE "\033[97m"
 #define BLUE "\033[94m"
 #define RED "\033[91m"
+#define PURPLE "\033[38;2;255;105;255m"
 #define BOLD "\033[1m"
 #define RESET "\033[0m"
 
@@ -17,6 +19,7 @@
 #define BLD_RED BOLD RED
 #define BLD_BLUE BOLD BLUE
 #define BLD_GREEN BOLD GREEN
+#define BLD_PURPLE BOLD PURPLE
 
 /*
 ** Lenght max
@@ -67,6 +70,19 @@
 #define SMALL_ZONE_SIZE ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(SMALL_MAX) + sizeof(t_block)) * 100)
 #define LARGE_ZONE_SIZE(x) ALIGN_TO_PAGE(sizeof(t_zone) + (ALIGN8(x) + sizeof(t_block)))
 
+
+typedef struct s_env_value {
+	bool			enabled;
+	size_t			value;
+} 					t_env_value;
+
+typedef enum e_env_var {
+	MALLOC_PERTURB_,
+	MALLOC_MMAP_MAX_,
+	MALLOC_MMAP_THRESHOLD_,
+	MALLOC_LOG_
+}	e_env_var;
+
 typedef enum e_block_kind {
 	TINY,
 	SMALL,
@@ -77,8 +93,8 @@ typedef struct s_block {
 	struct s_block	*next;
 	struct s_block	*prev;
 	struct s_zone	*owner;
-	size_t			size;
 	e_block_kind	kind;
+	size_t			size;
 	bool			is_free;
 }					t_block;
 
@@ -98,6 +114,16 @@ typedef struct s_allocator {
 	t_zone			*tiny;
 	t_zone			*small;
 	t_zone			*large;
+	pthread_mutex_t mutex;
+	size_t			MALLOC_MMAP_MAX_VALUE_;
+	size_t			MALLOC_MMAP_THRESHOLD_VALUE_;
+	size_t			MALLOC_PERTURB_VALUE_;
+	size_t			mmap_max;
+	size_t			mmap_total;
+	bool			MALLOC_MMAP_THRESHOLD_ENABLE_;
+	bool			MALLOC_MMAP_MAX_ENABLE_;
+	bool			MALLOC_PERTURB_ENABLE_;
+	bool			MALLOC_LOG_;
 }					t_allocator;
 
 extern t_allocator g_alloc;
@@ -106,24 +132,18 @@ extern t_allocator g_alloc;
 t_zone	**find_zone_link(t_zone **head, t_zone *zone);
 bool	split_block(t_block *block, size_t align_mem);
 t_block	*merge_with_next(t_block *block, t_zone *zone);
+void	perturb_fill(void *ptr, size_t len, bool inverted);
+void	is_env_var();
+
+// internal implementation
+void	internal_free(void *ptr);
+void	*internal_malloc(size_t size);
 
 // mandatory
 void	*ft_malloc(size_t size);
 void	ft_free(void *ptr);
 void	*ft_realloc(void *ptr, size_t size);
-void	show_alloc_mem(void);
+void	show_alloc_mem();
 
 // bonus
-void	show_alloc_mem_ex(void);
-
-// env var:
-//		- MALLOC_PERTURB_
-//		- MALLOC_MMAP_MAX_
-//		- MALLOC_MMAP_THRESHOLD_
-//		- MALLOC_LOG_ (custom)
-
-// pour le multi thread:
-// mutex et flag dans la struct
-// realloc envoie le flag si c'est lui qui a lock avant et qui a besoins de malloc et free
-// pour que malloc et free puisse faire les tache malgrer le lock
-// si malloc et free sont appeler alors que mutex et lock et que pas de flag alors attente
+void	show_alloc_mem_ex();

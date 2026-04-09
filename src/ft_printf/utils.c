@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ft_printf.h"
+#include "../../include/ft_printf.h"
 
 int	convert_hexa(unsigned long nb, char format) {
 	int	i;
@@ -27,4 +27,8 @@ int	convert_hexa(unsigned long nb, char format) {
 			i += ft_putchar("0123456789abcdef"[nb % 16]);
 	}
 	return (i);
+}
+
+int	ft_putchar(char c) {
+	return (write (1, &c, 1));
 }

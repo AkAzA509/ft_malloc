@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ft_printf.h"
+#include "../../include/ft_printf.h"
 
 int	s_format(char *str) {
 	int	i;
@@ -62,38 +62,68 @@ int	p_format(void *adr, char format) {
 	return (i);
 }
 
-int	di_format(int nb, int flag) {
-	int		i;
-	char	*str;
-	int		tmp;
+static int	print_unsigned_uint(unsigned int nb) {
+	int	len;
 
-	i = 0;
-	tmp = 0;
+	len = 0;
+	if (nb >= 10)
+		len += print_unsigned_uint(nb / 10);
+	len += ft_putchar((char)('0' + (nb % 10)));
+	return (len);
+}
+
+int	di_format(int nb, int flag) {
+	int			len;
+	unsigned int	mag;
+
+	len = 0;
 	if (flag == 2 && nb >= 0)
-		tmp += ft_putchar(' ');
+		len += ft_putchar(' ');
 	if (flag == 3 && nb >= 0)
-		tmp += ft_putchar('+');
-	str = ft_itoa(nb);
-	while (str[i] != '\0') {
-		ft_putchar(str[i]);
-		i++;
+		len += ft_putchar('+');
+	if (nb < 0) {
+		len += ft_putchar('-');
+		mag = (unsigned int)(-(nb + 1)) + 1;
 	}
-	free(str);
-	return (i + tmp);
+	else
+		mag = (unsigned int)nb;
+	len += print_unsigned_uint(mag);
+	return (len);
 }
 
 int	u_format(unsigned int nb) {
-	unsigned int	res;
-	int				i;
-	char			*str;
+	return (print_unsigned_uint(nb));
+}
 
-	res = nb;
-	i = 0;
-	str = ft_unsigned_itoa(res);
-	while (str[i] != '\0') {
-		ft_putchar(str[i]);
-		i++;
+static int	print_unsigned_size(size_t nb) {
+	int	len;
+
+	len = 0;
+	if (nb >= 10)
+		len += print_unsigned_size(nb / 10);
+	len += ft_putchar((char)('0' + (nb % 10)));
+	return (len);
+}
+
+int	zu_format(size_t nb) {
+	return (print_unsigned_size(nb));
+}
+
+int	zdi_format(ssize_t nb, int flag) {
+	int		len;
+	size_t	mag;
+
+	len = 0;
+	if (nb >= 0 && flag == 2)
+		len += ft_putchar(' ');
+	if (nb >= 0 && flag == 3)
+		len += ft_putchar('+');
+	if (nb < 0) {
+		len += ft_putchar('-');
+		mag = (size_t)(-(nb + 1)) + 1;
 	}
-	free(str);
-	return (i);
+	else
+		mag = (size_t)nb;
+	len += print_unsigned_size(mag);
+	return (len);
 }

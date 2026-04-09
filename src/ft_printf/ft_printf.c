@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ft_printf.h"
+#include "../../include/ft_printf.h"
 
 void	len_calc(int *total_len, int len) {
 	*total_len += len;
@@ -37,10 +37,16 @@ int	flag_checker(const char *str, int i) {
 
 int	format_checker(const char *str, va_list ap, int i, int *total_len) {
 	int	flag;
+	int	is_size;
 
 	flag = flag_checker(str, i);
 	if (flag > 0)
 		i++;
+	is_size = 0;
+	if (str[i + 1] == 'z') {
+		is_size = 1;
+		i++;
+	}
 	if (str[i + 1] == 'c')
 		len_calc(total_len, ft_putchar(va_arg(ap, int)));
 	if (str[i + 1] == 's')
@@ -48,9 +54,9 @@ int	format_checker(const char *str, va_list ap, int i, int *total_len) {
 	if (str[i + 1] == 'p')
 		len_calc(total_len, p_format(va_arg(ap, void *), 'p'));
 	if (str[i + 1] == 'd' || str[i + 1] == 'i')
-		len_calc(total_len, di_format(va_arg(ap, int), flag));
+		len_calc(total_len, is_size ? zdi_format(va_arg(ap, ssize_t), flag) : di_format(va_arg(ap, int), flag));
 	if (str[i + 1] == 'u')
-		len_calc(total_len, u_format(va_arg(ap, unsigned int)));
+		len_calc(total_len, is_size ? zu_format(va_arg(ap, size_t)) : u_format(va_arg(ap, unsigned int)));
 	if (str[i + 1] == 'X' || str[i + 1] == 'x')
 		len_calc(total_len, x_format(va_arg(ap, unsigned int), str[i + 1], flag));
 	if (str[i + 1] == '%')
