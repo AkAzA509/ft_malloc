@@ -1,7 +1,7 @@
 #include "../include/malloc.h"
 #include <stdio.h>
 #include <stdint.h>
-#include <errno.h>
+#include <limits.h>
 
 t_allocator		g_alloc = {
 	.tiny = NULL,
@@ -18,6 +18,38 @@ t_allocator		g_alloc = {
 	.counter.merge_number = 0
 };
 
+static bool	is_space(char c) {
+	return (c == ' ' || (c >= 9 && c <= 13));
+}
+
+static bool	parse_u10_strict(const char *value, unsigned long *out) {
+	const char		*p = value;
+	unsigned long	result = 0;
+	int				digit;
+
+	if (!value || !out)
+		return false;
+	while (is_space(*p))
+		p++;
+	if (*p == '+')
+		p++;
+	else if (*p == '-')
+		return false;
+	if (*p < '0' || *p > '9')
+		return false;
+	while (*p >= '0' && *p <= '9') {
+		digit = *p - '0';
+		if (result > (ULONG_MAX - (unsigned long)digit) / 10UL)
+			return false;
+		result = result * 10UL + (unsigned long)digit;
+		p++;
+	}
+	if (*p != '\0')
+		return false;
+	*out = result;
+	return true;
+}
+
 /*
 * Parse an env var once and expose both:
 * - enabled: true only for a full numeric value different from "0"
@@ -26,7 +58,6 @@ t_allocator		g_alloc = {
 static t_env_value	read_env_value(const char *name) {
 	t_env_value	out;
 	char	*value = getenv(name);
-	char	*end = NULL;
 	unsigned long	parsed;
 
 	out.enabled = false;
@@ -36,9 +67,7 @@ static t_env_value	read_env_value(const char *name) {
 		return out;
 	if (value[0] == '0' && value[1] == '\0')
 		return out;
-	errno = 0;
-	parsed = strtoul(value, &end, 10);
-	if (end != value && *end == '\0' && errno == 0 && parsed > 0) {
+	if (parse_u10_strict(value, &parsed) && parsed > 0) {
 		out.value = (size_t)parsed;
 		out.enabled = true;
 	}

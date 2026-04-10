@@ -1,5 +1,7 @@
+#define _POSIX_C_SOURCE 200809L
 #include "../include/malloc.h"
 #include <string.h>
+#include <stdlib.h>
 
 #define free ft_free
 #define malloc ft_malloc
@@ -41,17 +43,24 @@ static void	report(const char *name, int ok) {
 	// 	= align in memory %ld / 0x%zX / pages = %ld\n", zone, align_t, block, ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t) / PAGE_SIZE);
 // }
 
-// int test_threshold() {
-// 	char	*str = ft_malloc(700);
+int test_threshold() {
+	setenv("MALLOC_MMAP_THRESHOLD_", "100", 0);
+	setenv("MALLOC_PERTURB_", "45", 0);
+	char	*str = ft_malloc(700);
 
-// 	ft_printf("align : %zu, page align: %zu\n", ALIGN8(700), LARGE_ZONE_SIZE(700));
-// 	ft_printf("size of header: zone: %zu, block: %zu\n", sizeof(t_zone), sizeof(t_block));
+	ft_printf("align : %zu, page align: %zu\n", ALIGN8(700), LARGE_ZONE_SIZE(700));
+	ft_printf("size of header: zone: %zu, block: %zu\n", sizeof(t_zone), sizeof(t_block));
 
-// 	str = memset(str, 'A', 700);
-// 	show_alloc_mem_ex();
-// }
+	str = memset(str, 'A', 700);
+	show_alloc_mem_ex();
+	free(str);
+	unsetenv("MALLOC_MMAP_THRESHOLD_");
+	unsetenv("MALLOC_PERTURB_");
+}
 
 int	main(void) {
+
+	test_threshold();
 	char	*tiny;
 	char	*small;
 	char	*large;
