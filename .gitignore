@@ -1,4 +1,4 @@
 obj/
 *.so
 a.out
-test.c
+test_*
