@@ -43,6 +43,68 @@ void	show_alloc_mem() {
 // 						Extend Logger
 // ----------------------------------------------------------------
 
+t_frag_stats	compute_fragmentation() {
+	t_frag_stats	stats = {0};
+	t_zone			*zone = NULL;
+	t_block			*block = NULL;
+
+	zone = g_alloc.tiny;
+	while (zone) {
+		stats.total_mmap += zone->zone_size;
+		block = zone->block_list;
+		while (block) {
+			if (block->is_free) {
+				stats.total_free += block->size;
+				if (block->size > stats.largest_free)
+					stats.largest_free = block->size;
+			}
+			else
+				stats.total_allocated += block->size;
+			block = block->next;
+		}
+		zone = zone->next;
+	}
+
+	zone = g_alloc.small;
+	while (zone) {
+		stats.total_mmap += zone->zone_size;
+		block = zone->block_list;
+		while (block) {
+			if (block->is_free) {
+				stats.total_free += block->size;
+				if (block->size > stats.largest_free)
+					stats.largest_free = block->size;
+			}
+			else
+				stats.total_allocated += block->size;
+			block = block->next;
+		}
+		zone = zone->next;
+	}
+
+	zone = g_alloc.large;
+	while (zone) {
+		stats.total_mmap += zone->zone_size;
+		block = zone->block_list;
+		while (block) {
+			if (block->is_free) {
+				stats.total_free += block->size;
+				if (block->size > stats.largest_free)
+					stats.largest_free = block->size;
+			}
+			else
+				stats.total_allocated += block->size;
+			block = block->next;
+		}
+		zone = zone->next;
+	}
+
+	if (stats.total_free > 0)
+		stats.ext_frag_percent = (100 * (stats.total_free - stats.largest_free)) / stats.total_free;
+
+	return stats;
+}
+
 static void	print_hex_byte(unsigned char byte) {
 	const char	*digits;
 
@@ -98,13 +160,27 @@ void	show_alloc_mem_ex() {
 	t_zone	*small = g_alloc.small;
 	t_zone	*large = g_alloc.large;
 	size_t	print_limit = 5000;
+	t_frag_stats stats;
 	
 	ft_printf(BLD_PURPLE"\n====================================================================================\n");
-	ft_printf("     MEMORY HEX DUMP  -  Total mmap call %zu  -  dump limit %zu bytes               \n", g_alloc.mmap_total, print_limit);
+	ft_printf("     MEMORY HEX DUMP  -  Total mmap call %zu  -  dump limit %zu bytes               \n", g_alloc.counter.mmap_total, print_limit);
 	ft_printf("====================================================================================\n"RESET);
 	print_hex_dump(tiny, "TINY", print_limit);
 	print_hex_dump(small, "SMALL", print_limit);
 	print_hex_dump(large, "LARGE", print_limit);
-	pthread_mutex_unlock(&g_alloc.mutex);
 
+	stats = compute_fragmentation();
+	ft_printf(BLD_PURPLE"\n====================================================================================\n");
+	ft_printf("     FRAGMENTATION & STATS                                                          \n");
+	ft_printf("====================================================================================\n"RESET);
+	ft_printf(BLD_WHITE"Total mmap'd:       %zu bytes\n"RESET, stats.total_mmap);
+	ft_printf(BLD_GREEN"Total allocated:    %zu bytes\n"RESET, stats.total_allocated);
+	ft_printf(BLD_BLUE"Total free:         %zu bytes\n"RESET, stats.total_free);
+	ft_printf(BLD_WHITE"Largest free block: %zu bytes\n"RESET, stats.largest_free);
+	ft_printf(BLD_RED"Fragmentation:      %zu%%\n"RESET, stats.ext_frag_percent);
+	ft_printf(BLD_WHITE"Split operations:   %zu\n"RESET, g_alloc.counter.split_number);
+	ft_printf(BLD_WHITE"Merge operations:   %zu\n"RESET, g_alloc.counter.merge_number);
+	ft_printf(BLD_PURPLE"====================================================================================\n"RESET);
+
+	pthread_mutex_unlock(&g_alloc.mutex);
 }

@@ -19,7 +19,7 @@ static void	report(const char *name, int ok) {
 	}
 }
 
-void print_lenght_calcul() {
+// void print_lenght_calcul() {
 	// printf("align: %d\n", ALIGN8(4050));
 	// size_t zone = sizeof(t_zone);
 	// size_t block = sizeof(t_block);
@@ -39,7 +39,17 @@ void print_lenght_calcul() {
 	// 	+ ((align)%ld + (t_block)%ld) \n\t \
 	// 	* 100\n\t \
 	// 	= align in memory %ld / 0x%zX / pages = %ld\n", zone, align_t, block, ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t) / PAGE_SIZE);
-}
+// }
+
+// int test_threshold() {
+// 	char	*str = ft_malloc(700);
+
+// 	ft_printf("align : %zu, page align: %zu\n", ALIGN8(700), LARGE_ZONE_SIZE(700));
+// 	ft_printf("size of header: zone: %zu, block: %zu\n", sizeof(t_zone), sizeof(t_block));
+
+// 	str = memset(str, 'A', 700);
+// 	show_alloc_mem_ex();
+// }
 
 int	main(void) {
 	char	*tiny;

@@ -106,6 +106,31 @@ typedef struct s_zone {
 	size_t			total_blocks;
 }					t_zone;
 
+typedef struct s_env {
+	size_t			MALLOC_MMAP_MAX_VALUE_;			// Cap the number of large allocation
+	size_t			MALLOC_MMAP_THRESHOLD_VALUE_;	// Define the min size where the alloc become a large
+	size_t			MALLOC_PERTURB_VALUE_;			// Fill the allocate block with random data, at free too
+	size_t			mmap_max;
+	bool			MALLOC_MMAP_THRESHOLD_ENABLE_;
+	bool			MALLOC_MMAP_MAX_ENABLE_;
+	bool			MALLOC_PERTURB_ENABLE_;
+	bool			MALLOC_LOG_;					// Enable the logging of the error
+}					t_env;
+
+typedef struct s_counter {
+	size_t			mmap_total;
+	size_t			split_number;
+	size_t			merge_number;
+}					t_counter;
+
+typedef struct s_frag_stats {
+	size_t			total_mmap;
+	size_t			total_allocated;
+	size_t			total_free;
+	size_t			largest_free;
+	size_t			ext_frag_percent;
+}					t_frag_stats;
+
 /*
 ** Global struct
 ** Store the 3 allocation linked list
@@ -114,36 +139,32 @@ typedef struct s_allocator {
 	t_zone			*tiny;
 	t_zone			*small;
 	t_zone			*large;
+	t_env			env;
+	t_counter		counter;
 	pthread_mutex_t mutex;
-	size_t			MALLOC_MMAP_MAX_VALUE_;
-	size_t			MALLOC_MMAP_THRESHOLD_VALUE_;
-	size_t			MALLOC_PERTURB_VALUE_;
-	size_t			mmap_max;
-	size_t			mmap_total;
-	bool			MALLOC_MMAP_THRESHOLD_ENABLE_;
-	bool			MALLOC_MMAP_MAX_ENABLE_;
-	bool			MALLOC_PERTURB_ENABLE_;
-	bool			MALLOC_LOG_;
+	
 }					t_allocator;
 
 extern t_allocator g_alloc;
 
 // utils
-t_zone	**find_zone_link(t_zone **head, t_zone *zone);
-bool	split_block(t_block *block, size_t align_mem);
-t_block	*merge_with_next(t_block *block, t_zone *zone);
-void	perturb_fill(void *ptr, size_t len, bool inverted);
-void	is_env_var();
+t_zone			**find_zone_link(t_zone **head, t_zone *zone);
+bool			split_block(t_block *block, size_t align_mem);
+t_block			*merge_with_next(t_block *block, t_zone *zone);
+bool			is_adjacent(t_block *left, t_block *right);
+void			perturb_fill(void *ptr, size_t len, bool inverted);
+void			is_env_var();
+t_frag_stats	compute_fragmentation();
 
 // internal implementation
-void	internal_free(void *ptr);
-void	*internal_malloc(size_t size);
+void			internal_free(void *ptr);
+void			*internal_malloc(size_t size);
 
 // mandatory
-void	*ft_malloc(size_t size);
-void	ft_free(void *ptr);
-void	*ft_realloc(void *ptr, size_t size);
-void	show_alloc_mem();
+void			*ft_malloc(size_t size);
+void			ft_free(void *ptr);
+void			*ft_realloc(void *ptr, size_t size);
+void			show_alloc_mem();
 
 // bonus
-void	show_alloc_mem_ex();
+void			show_alloc_mem_ex();

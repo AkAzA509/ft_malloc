@@ -9,7 +9,7 @@ FLG			:= -Wextra -Werror -Wextra -g3 #-fsanitize=address,leak
 fPIC_FLG	:= -fPIC
 SRC_PATH	:= src/
 INC_PATH	:= include/
-TEST_N		:= test/test.c
+TEST_N		:= coucou.c  #test/test.c
 TEST_T		:= test/test_thread.c
 TEST_N_EXE	:= test_normal
 TEST_T_EXE	:= test_thread

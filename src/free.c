@@ -29,7 +29,7 @@ t_zone	**find_zone_link(t_zone **head, t_zone *zone) {
 *
 * If (char *)(left + 1) + left->size == (char *)right -> blocks are adjacent
 */
-static bool	is_adjacent(t_block *left, t_block *right) {
+bool	is_adjacent(t_block *left, t_block *right) {
 	return ((char *)(left + 1) + left->size == (char *)right);
 }
 
@@ -50,6 +50,7 @@ t_block	*merge_with_next(t_block *block, t_zone *zone) {
 
 	zone->free_blocks--;
 	zone->total_blocks--;
+	g_alloc.counter.merge_number++;
 	return block;
 }
 
@@ -64,14 +65,14 @@ static void	free_other(t_block *block, t_zone **zone_head) {
 	t_zone	**zone_link = find_zone_link(zone_head, zone);
 
 	if (!*zone_link) {
-		if (g_alloc.MALLOC_LOG_)
+		if (g_alloc.env.MALLOC_LOG_)
 			ft_printf(BLD_RED"Error: ptr not recognize, free failed\n"RESET);
 		return;
 	}
 
 	if (block->is_free)
 		return;
-	if (g_alloc.MALLOC_PERTURB_ENABLE_ && g_alloc.MALLOC_PERTURB_VALUE_)
+	if (g_alloc.env.MALLOC_PERTURB_ENABLE_ && g_alloc.env.MALLOC_PERTURB_VALUE_)
 		perturb_fill((void *)(block + 1), block->size, true);
 
 	block->is_free = true;
@@ -87,7 +88,7 @@ static void	free_other(t_block *block, t_zone **zone_head) {
 	if (zone->total_blocks == 1) {
 		t_zone *next = zone->next;
 		if (munmap(zone, zone->zone_size) < 0) {
-			if (g_alloc.MALLOC_LOG_)
+			if (g_alloc.env.MALLOC_LOG_)
 				ft_printf(BLD_RED"Error: munmap() failed while dealocate %s block\n"RESET, kind == TINY ? "TINY" : "SMALL");
 			return ;
 		}
@@ -103,7 +104,7 @@ static void	free_large(t_block *block) {
 	t_zone	**zone_link = find_zone_link(&g_alloc.large, zone);
 
 	if (!*zone_link) {
-		if (g_alloc.MALLOC_LOG_)
+		if (g_alloc.env.MALLOC_LOG_)
 			ft_printf(BLD_RED"Error: ptr not recognize, free failed\n"RESET);
 		return;
 	}
@@ -111,12 +112,12 @@ static void	free_large(t_block *block) {
 	t_zone *next = zone->next;
 	
 	if (munmap(zone, zone->zone_size) < 0) {
-		if (g_alloc.MALLOC_LOG_)
+		if (g_alloc.env.MALLOC_LOG_)
 			ft_printf(BLD_RED"Error: munmap() failed while dealocate LARGE block\n"RESET);
 		return ;
 	}
-	if (g_alloc.mmap_max > 0)
-		g_alloc.mmap_max--;
+	if (g_alloc.env.mmap_max > 0)
+		g_alloc.env.mmap_max--;
 
 	if (*zone_link)
 		*zone_link = next;
