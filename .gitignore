@@ -1,4 +1,5 @@
 obj/
 *.so
 a.out
-test_*
+test_normal
+test_thread
