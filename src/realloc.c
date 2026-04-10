@@ -25,7 +25,7 @@ static void	*ft_memcpy(void *dst, const void *src, size_t len) {
 * if it work, try to split the block
 */
 static bool	merge_block(t_block *block, size_t size, t_zone *zone) {
-	while (block && block->next && block->next->is_free)
+	while (block && block->next && block->next->is_free && is_adjacent(block, block->next))
 		block = merge_with_next(block, zone);
 
 	if (block->size >= size) {

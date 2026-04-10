@@ -8,12 +8,14 @@ t_allocator		g_alloc = {
 	.small = NULL,
 	.large = NULL,
 	.mutex = PTHREAD_MUTEX_INITIALIZER,
-	.MALLOC_LOG_ = false,
-	.MALLOC_MMAP_MAX_ENABLE_ = false,
-	.MALLOC_PERTURB_ENABLE_ = false,
-	.MALLOC_MMAP_THRESHOLD_ENABLE_ = false,
-	.mmap_max = 0,
-	.mmap_total = 0
+	.env.MALLOC_LOG_ = false,
+	.env.MALLOC_MMAP_MAX_ENABLE_ = false,
+	.env.MALLOC_PERTURB_ENABLE_ = false,
+	.env.MALLOC_MMAP_THRESHOLD_ENABLE_ = false,
+	.env.mmap_max = 0,
+	.counter.mmap_total = 0,
+	.counter.split_number = 0,
+	.counter.merge_number = 0
 };
 
 /*
@@ -49,7 +51,7 @@ static t_env_value	read_env_value(const char *name) {
 */
 void	perturb_fill(void *ptr, size_t len, bool inverted) {
 	unsigned char	*p = (unsigned char *)ptr;
-	unsigned char	seed = (g_alloc.MALLOC_PERTURB_VALUE_ & 0xFF);
+	unsigned char	seed = (g_alloc.env.MALLOC_PERTURB_VALUE_ & 0xFF);
 	uint32_t		state = ((uint32_t)(uintptr_t)ptr) ^ ((uint32_t)len << 1) ^ ((uint32_t)seed << 24) ^ 0x9E3779B9u;
 	size_t			i = 0;
 	unsigned char	byte;
@@ -89,7 +91,7 @@ static t_zone	*create_zone(size_t zone_size, e_block_kind kind) {
 	block->owner = zone;
 
 	zone->block_list = block;
-	g_alloc.mmap_total++;
+	g_alloc.counter.mmap_total++;
 	return zone;
 }
 
@@ -135,6 +137,7 @@ bool	split_block(t_block *block, size_t align_mem) {
 		block->next->prev = new_block;
 	block->next = new_block;
 	block->size = align_mem;
+	g_alloc.counter.split_number++;
 	return true;
 }
 
@@ -149,7 +152,7 @@ static void	*allocate_block(size_t align_mem, size_t zone_size, e_block_kind kin
 	if (!*zone_head) {
 		*zone_head = create_zone(zone_size, kind);
 		if (!*zone_head) {
-			if (g_alloc.MALLOC_LOG_)
+			if (g_alloc.env.MALLOC_LOG_)
 				ft_printf(BLD_RED"Error: mmap() failed at %s zone creation"RESET, kind == TINY ? "TINY" : "SMALL");
 			return NULL;
 		}
@@ -169,7 +172,7 @@ static void	*allocate_block(size_t align_mem, size_t zone_size, e_block_kind kin
 	if (!block) {
 		zone = create_zone(zone_size, kind);
 		if (!zone) {
-			if (g_alloc.MALLOC_LOG_)
+			if (g_alloc.env.MALLOC_LOG_)
 				ft_printf(BLD_RED"Error: mmap() failed at %s zone creation"RESET, kind == TINY ? "TINY" : "SMALL" );
 			return NULL;
 		}
@@ -183,7 +186,7 @@ static void	*allocate_block(size_t align_mem, size_t zone_size, e_block_kind kin
 	else
 		zone->free_blocks--;
 	block->is_free = false;
-	if (g_alloc.MALLOC_PERTURB_ENABLE_ && g_alloc.MALLOC_PERTURB_VALUE_)
+	if (g_alloc.env.MALLOC_PERTURB_ENABLE_ && g_alloc.env.MALLOC_PERTURB_VALUE_)
 		perturb_fill((void *)(block + 1), block->size, false);
 	return (void *)(block + 1);
 }
@@ -196,19 +199,19 @@ static void	*large(size_t zone_large_size, t_zone **zone_head) {
 	t_block	*block;
 	bool can_mmap = true;
 
-	if (g_alloc.MALLOC_MMAP_MAX_ENABLE_)
-		can_mmap = (g_alloc.mmap_max < g_alloc.MALLOC_MMAP_MAX_VALUE_);
+	if (g_alloc.env.MALLOC_MMAP_MAX_ENABLE_)
+		can_mmap = (g_alloc.env.mmap_max < g_alloc.env.MALLOC_MMAP_MAX_VALUE_);
 
 	if(can_mmap) {
 		zone = create_zone(zone_large_size, LARGE);
 		if (!zone) {
-			if (g_alloc.MALLOC_LOG_)
+			if (g_alloc.env.MALLOC_LOG_)
 				ft_printf(BLD_RED"Error: mmap() failed at LARGE zone creation"RESET);
 			return NULL;
 		}
 	}
-	else if(g_alloc.MALLOC_LOG_) {
-		ft_printf(BLD_RED"Error: MALLOC_MMAP_MAX_ (%zu) reached\n"RESET, g_alloc.MALLOC_MMAP_MAX_VALUE_);
+	else if(g_alloc.env.MALLOC_LOG_) {
+		ft_printf(BLD_RED"Error: MALLOC_MMAP_MAX_ (%zu) reached\n"RESET, g_alloc.env.MALLOC_MMAP_MAX_VALUE_);
 		return NULL;
 	}
 	else
@@ -219,9 +222,9 @@ static void	*large(size_t zone_large_size, t_zone **zone_head) {
 	zone->total_blocks = 1;
 	zone->next = *zone_head;
 	*zone_head = zone;
-	if (g_alloc.MALLOC_PERTURB_ENABLE_ && g_alloc.MALLOC_PERTURB_VALUE_)
+	if (g_alloc.env.MALLOC_PERTURB_ENABLE_ && g_alloc.env.MALLOC_PERTURB_VALUE_)
 		perturb_fill((void *)(block + 1), block->size, false);
-	g_alloc.mmap_max++;
+	g_alloc.env.mmap_max++;
 	return (void *)(block + 1);
 }
 
@@ -229,19 +232,19 @@ void	is_env_var() {
 	t_env_value	v;
 
 	v = read_env_value("MALLOC_LOG_");
-	g_alloc.MALLOC_LOG_ = v.enabled;
+	g_alloc.env.MALLOC_LOG_ = v.enabled;
 
 	v = read_env_value("MALLOC_MMAP_MAX_");
-	g_alloc.MALLOC_MMAP_MAX_VALUE_ = v.value;
-	g_alloc.MALLOC_MMAP_MAX_ENABLE_ = v.enabled;
+	g_alloc.env.MALLOC_MMAP_MAX_VALUE_ = v.value;
+	g_alloc.env.MALLOC_MMAP_MAX_ENABLE_ = v.enabled;
 
 	v = read_env_value("MALLOC_MMAP_THRESHOLD_");
-	g_alloc.MALLOC_MMAP_THRESHOLD_VALUE_ = v.value;
-	g_alloc.MALLOC_MMAP_THRESHOLD_ENABLE_ = v.enabled;
+	g_alloc.env.MALLOC_MMAP_THRESHOLD_VALUE_ = v.value;
+	g_alloc.env.MALLOC_MMAP_THRESHOLD_ENABLE_ = v.enabled;
 
 	v = read_env_value("MALLOC_PERTURB_");
-	g_alloc.MALLOC_PERTURB_VALUE_ = v.value;
-	g_alloc.MALLOC_PERTURB_ENABLE_ = v.enabled;
+	g_alloc.env.MALLOC_PERTURB_VALUE_ = v.value;
+	g_alloc.env.MALLOC_PERTURB_ENABLE_ = v.enabled;
 }
 
 void	*internal_malloc(size_t size) {
@@ -250,7 +253,7 @@ void	*internal_malloc(size_t size) {
 
 	size_t	align_mem = ALIGN8(size);
 
-	if (g_alloc.MALLOC_MMAP_THRESHOLD_ENABLE_ && align_mem >= g_alloc.MALLOC_MMAP_THRESHOLD_VALUE_)
+	if (g_alloc.env.MALLOC_MMAP_THRESHOLD_ENABLE_ && align_mem >= g_alloc.env.MALLOC_MMAP_THRESHOLD_VALUE_)
 		return large(LARGE_ZONE_SIZE(size), &g_alloc.large);
 
 	if (align_mem <= TINY_MAX)
