@@ -3,10 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define free ft_free
-#define malloc ft_malloc
-#define realloc ft_realloc
-
 static int	g_pass = 0;
 static int	g_fail = 0;
 
@@ -43,23 +39,22 @@ static void	report(const char *name, int ok) {
 	// 	= align in memory %ld / 0x%zX / pages = %ld\n", zone, align_t, block, ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t), ALIGN_TO_PAGE(res_t) / PAGE_SIZE);
 // }
 
-int test_threshold() {
+void test_threshold() {
 	setenv("MALLOC_MMAP_THRESHOLD_", "100", 0);
 	setenv("MALLOC_PERTURB_", "45", 0);
 	char	*str = ft_malloc(700);
-
+	
 	ft_printf("align : %zu, page align: %zu\n", ALIGN8(700), LARGE_ZONE_SIZE(700));
 	ft_printf("size of header: zone: %zu, block: %zu\n", sizeof(t_zone), sizeof(t_block));
-
+	
 	str = memset(str, 'A', 700);
 	show_alloc_mem_ex();
-	free(str);
+	ft_free(str);
 	unsetenv("MALLOC_MMAP_THRESHOLD_");
 	unsetenv("MALLOC_PERTURB_");
 }
 
 int	main(void) {
-
 	test_threshold();
 	char	*tiny;
 	char	*small;
@@ -71,12 +66,12 @@ int	main(void) {
 	ft_printf(BLD_BLUE"\n== ft_malloc test suite ==\n"RESET);
 
 	/* Basic allocations: tiny, small, large */
-	tiny = malloc(32);
-	small = malloc(700);
-	large = malloc(6000);
-	report("malloc tiny", tiny != NULL);
-	report("malloc small", small != NULL);
-	report("malloc large", large != NULL);
+	tiny = ft_malloc(32);
+	small = ft_malloc(700);
+	large = ft_malloc(6000);
+	report("ft_malloc tiny", tiny != NULL);
+	report("ft_malloc small", small != NULL);
+	report("ft_malloc large", large != NULL);
 
 	if (tiny)
 		memset(tiny, 'A', 32);
@@ -88,54 +83,54 @@ int	main(void) {
 	show_alloc_mem();
 
 	/* realloc grow + shrink with data preservation */
-	r = realloc(tiny, 200);
-	report("realloc grow tiny->small", r != NULL);
+	r = ft_realloc(tiny, 200);
+	report("ft_realloc grow tiny->small", r != NULL);
 	if (r) {
 		report("preserve data after grow", r[0] == 'A' && r[31] == 'A');
 		tiny = r;
 	}
 
-	r = realloc(tiny, 24);
-	report("realloc shrink", r != NULL);
+	r = ft_realloc(tiny, 24);
+	report("ft_realloc shrink", r != NULL);
 	if (r) {
 		report("preserve data after shrink", r[0] == 'A');
 		tiny = r;
 	}
 
 	/* API edge cases */
-	report("malloc(0) == NULL", malloc(0) == NULL);
-	r = realloc(NULL, 128);
-	report("realloc(NULL, n)", r != NULL);
+	report("ft_malloc(0) == NULL", ft_malloc(0) == NULL);
+	r = ft_realloc(NULL, 128);
+	report("ft_realloc(NULL, n)", r != NULL);
 	if (r)
-		free(r);
-	r = realloc(small, 0);
-	report("realloc(ptr, 0) == NULL", r == NULL);
+		ft_free(r);
+	r = ft_realloc(small, 0);
+	report("ft_realloc(ptr, 0) == NULL", r == NULL);
 	small = NULL;
 
 	/* small stress pass */
 	i = 0;
 	while (i < 32) {
-		arr[i] = malloc((i + 1) * 17);
+		arr[i] = ft_malloc((i + 1) * 17);
 		i++;
 	}
 	i = 0;
 	while (i < 32) {
 		if (arr[i])
-			free(arr[i]);
+			ft_free(arr[i]);
 		i++;
 	}
-	report("stress alloc/free x32", 1);
+	report("stress alloc/ft_free x32", 1);
 
 	ft_printf(BLD_BLUE"\n== Detailed dump before cleanup ==\n"RESET);
 	show_alloc_mem_ex();
 
 	/* Cleanup */
 	if (tiny)
-		free(tiny);
+		ft_free(tiny);
 	if (small)
-		free(small);
+		ft_free(small);
 	if (large)
-		free(large);
+		ft_free(large);
 
 	ft_printf(BLD_BLUE"\n== Detailed dump after cleanup ==\n"RESET);
 	show_alloc_mem_ex();

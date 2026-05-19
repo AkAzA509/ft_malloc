@@ -5,7 +5,7 @@ endif
 NAME		:= libft_malloc_$(HOSTTYPE).so
 SYMLINK		:= libft_malloc.so
 CC			:= cc
-FLG			:= -Wextra -Werror -Wextra -g3 #-fsanitize=address,leak
+FLG			:= -Wextra -Werror -Wextra -g3
 fPIC_FLG	:= -fPIC
 SRC_PATH	:= src/
 INC_PATH	:= include/
@@ -36,8 +36,8 @@ $(OBJ_DIR)%.o: %.c
 	@$(CC) $(FLG) $(fPIC_FLG) -c $< -o $@
 
 test: all
-	@$(CC) $(FLG) $(TEST_N) -I$(INC_PATH) -L. -lft_malloc -Wl,-rpath,'$$ORIGIN' -o $(TEST_N_EXE)
-	@$(CC) $(FLG) $(TEST_T) -I$(INC_PATH) -L. -lft_malloc -Wl,-rpath,'$$ORIGIN' -o $(TEST_T_EXE)
+	@$(CC) $(FLG) -fsanitize=leak $(TEST_N) -I$(INC_PATH) -L. -lft_malloc -Wl,-rpath,'$$ORIGIN' -o $(TEST_N_EXE)
+	@$(CC) $(FLG) -fsanitize=leak $(TEST_T) -I$(INC_PATH) -L. -lft_malloc -Wl,-rpath,'$$ORIGIN' -o $(TEST_T_EXE)
 
 clean:
 	@rm -rf $(OBJ_DIR)
